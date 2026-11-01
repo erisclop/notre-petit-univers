@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nos retrouvailles</title>
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;padding:12px;
+ background:#171427;color:#fff0ef;
+ font-family:system-ui,-apple-system,sans-serif;
+}
+.widget{
+ max-width:650px;margin:auto;padding:24px 16px;
+ text-align:center;border-radius:22px;
+ background:linear-gradient(#24213f,#39304d);
+ overflow:hidden;
+}
+h1{font-size:clamp(19px,4vw,27px);margin:0 0 8px}
+.subtitle{color:#d9c9de;font-size:14px;margin:0}
+.scene{
+ position:relative;height:280px;margin:14px auto 0;
+ max-width:550px;
+ border-bottom:2px dashed #83738f;
+}
+.avatar{
+ position:absolute;bottom:0;
+ width:clamp(74px,23%,125px);
+ height:245px;object-fit:contain;
+ object-position:bottom;
+ transition:left 1s ease,right 1s ease;
+ image-rendering:auto;
+}
+#valentina{left:0}
+#eliott{right:0}
+.heart{
+ position:absolute;top:38px;left:50%;
+ transform:translateX(-50%);
+ font-size:29px;animation:beat 1.6s infinite;
+}
+@keyframes beat{
+ 50%{transform:translateX(-50%) scale(1.2)}
+}
+.countdown{
+ display:flex;justify-content:center;gap:10px;
+ margin:22px 0;
+}
+.unit{
+ min-width:84px;padding:13px 8px;
+ background:#ffffff14;border:1px solid #ffffff24;
+ border-radius:13px;
+}
+.number{font-size:29px;font-weight:750}
+.label{font-size:11px;letter-spacing:1px;color:#d8cadb}
+#message{font-size:14px;color:#f2dbe8;margin:12px 0}
+details{margin-top:22px;font-size:13px;color:#d5c5dc}
+summary{cursor:pointer}
+.controls{margin-top:12px}
+input,button{
+ border:1px solid #a99ab6;border-radius:9px;
+ padding:10px;font-size:14px;
+}
+button{background:#f0d8e4;color:#282039;margin:5px}
+input{max-width:190px;background:white;color:#222}
+.note{font-size:11px;color:#bfb2ca;margin-top:12px}
+@media(max-width:420px){
+ .widget{padding:20px 10px}
+ .scene{height:220px}
+ .avatar{height:195px}
+ .unit{min-width:75px}
+}
+</style>
+</head>
+<body>
+<div class="widget">
+<h1>Plus que quelques instants avant nous ♡</h1>
+<p class="subtitle">Chaque jour nous rapproche un peu plus.</p>
+
+<div class="scene" id="scene">
+ <div class="heart">♥</div>
+ <img id="valentina" class="avatar"
+ src="avatar-valentina.png" alt="Valentina">
+ <img id="eliott" class="avatar"
+ src="avatar-eliott.png" alt="Eliott">
+</div>
+
+<div class="countdown">
+ <div class="unit"><div id="days" class="number">--</div><div class="label">JOURS</div></div>
+ <div class="unit"><div id="hours" class="number">--</div><div class="label">HEURES</div></div>
+ <div class="unit"><div id="minutes" class="number">--</div><div class="label">MINUTES</div></div>
+</div>
+<p id="message">Chargement de notre date...</p>
+
+<details>
+ <summary>Tester une autre date (prévisualisation)</summary>
+ <div class="controls">
+  <input type="date" id="testDate">
+  <button id="test">Tester</button>
+  <button id="reset">Revenir à la vraie date</button>
+ </div>
+ <p class="note">Le test ne modifie pas la date d'Eliott.</p>
+</details>
+</div>
+<script>
+const zone="Europe/Paris";
+let official=null;
+let preview=null;
+const $=id=>document.getElementById(id);
+
+function parisParts(d){
+ const parts=new Intl.DateTimeFormat("en-GB",{
+  timeZone:zone,year:"numeric",month:"2-digit",
+  day:"2-digit",hour:"2-digit",minute:"2-digit",
+  second:"2-digit",hourCycle:"h23"
+ }).formatToParts(d);
+ return Object.fromEntries(parts.map(p=>[p.type,p.value]));
+}
+function dayNumber(s){
+ const [y,m,d]=s.split("-").map(Number);
+ return Date.UTC(y,m-1,d)/86400000;
+}
+function localTimestamp(date,time){
+ const [y,m,d]=date.split("-").map(Number);
+ const [h,min]=time.split(":").map(Number);
+ const desired=Date.UTC(y,m-1,d,h,min);
+ let guess=desired;
+ for(let i=0;i<3;i++){
+  const p=parisParts(new Date(guess));
+  const actual=Date.UTC(+p.year,+p.month-1,+p.day,+p.hour,+p.minute);
+  guess+=desired-actual;
+ }
+ return guess;
+}
+function moveCharacters(progress,reunion){
+ const scene=$("scene");
+ const a=$("valentina"),b=$("eliott");
+ const travel=Math.max(0,(scene.clientWidth-a.offsetWidth-b.offsetWidth)/2);
+ a.style.left=(travel*progress)+"px";
+ b.style.right=(travel*progress)+"px";
+ $("message").textContent=reunion
+  ?"Enfin réunis ! Un câlin pour nous deux ♡"
+  :"Encore un peu de patience avant notre prochain câlin ♡";
+}
+function render(){
+ const data=preview||official;
+ if(!data)return;
+ const now=new Date(),p=parisParts(now);
+ const today=p.year+"-"+p.month+"-"+p.day;
+ let days=0,hours="--",minutes="--",reunion=false;
+ let progress=0;
+ if(data.heure){
+  const remaining=localTimestamp(data.date,data.heure)-now.getTime();
+  reunion=remaining<=0;
+  const total=Math.max(0,Math.ceil(remaining/60000));
+  days=Math.floor(total/1440);
+  hours=String(Math.floor(total%1440/60)).padStart(2,"0");
+  minutes=String(total%60).padStart(2,"0");
+  progress=Math.min(1,Math.max(0,1-remaining/(30*86400000)));
+ }else{
+  const difference=dayNumber(data.date)-dayNumber(today);
+  days=Math.max(0,difference);
+  reunion=difference<=0;
+  progress=Math.min(1,Math.max(0,1-difference/30));
+ }
+ if(reunion)progress=1;
+ $("days").textContent=days;
+ $("hours").textContent=hours;
+ $("minutes").textContent=minutes;
+ moveCharacters(progress,reunion);
+ if(preview)$("message").textContent+=" (mode test)";
+}
+async function loadDate(){
+ try{
+  const r=await fetch("date.json?t="+Date.now(),{cache:"no-store"});
+  if(!r.ok)throw Error("Fichier inaccessible");
+  const v=await r.json();
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(v.date))
+   throw Error("Date invalide");
+  if(v.heure!==null && !/^([01]\d|2[0-3]):[0-5]\d$/.test(v.heure))
+   throw Error("Heure invalide");
+  official=v;
+  render();
+ }catch(e){
+  if(!official&&!preview)
+   $("message").textContent="Date indisponible : vérifier date.json sur GitHub Pages.";
+ }
+}
+$("test").onclick=()=>{
+ const v=$("testDate").value;
+ if(!v)return;
+ preview={date:v,heure:null};
+ render();
+};
+$("reset").onclick=()=>{
+ preview=null;
+ if(official)render();else loadDate();
+};
+window.addEventListener("resize",render);
+loadDate();
+setInterval(render,10000);
+setInterval(loadDate,60000);
+</script>
+</body>
+</html>
