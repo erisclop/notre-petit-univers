@@ -7,198 +7,247 @@
 <style>
 *{box-sizing:border-box}
 body{
- margin:0;padding:12px;
- background:#171427;color:#fff0ef;
+ margin:0;
+ padding:12px;
+ background:#171427;
+ color:#fff0ef;
  font-family:system-ui,-apple-system,sans-serif;
 }
 .widget{
- max-width:650px;margin:auto;padding:24px 16px;
- text-align:center;border-radius:22px;
+ max-width:650px;
+ margin:auto;
+ padding:25px 14px;
  background:linear-gradient(#24213f,#39304d);
+ border-radius:22px;
+ text-align:center;
  overflow:hidden;
 }
-h1{font-size:clamp(19px,4vw,27px);margin:0 0 8px}
-.subtitle{color:#d9c9de;font-size:14px;margin:0}
-.scene{
- position:relative;height:280px;margin:14px auto 0;
- max-width:550px;
- border-bottom:2px dashed #83738f;
+h1{
+ font-size:clamp(23px,5vw,32px);
+ margin:0 0 12px;
 }
-.avatar{
- position:absolute;bottom:0;
- width:clamp(74px,23%,125px);
- height:245px;object-fit:contain;
+.scene{
+ width:100%;
+ max-width:540px;
+ height:260px;
+ margin:auto;
+ position:relative;
+ overflow:hidden;
+}
+.person{
+ position:absolute;
+ bottom:0;
+ width:clamp(85px,24%,125px);
+ height:235px;
+ object-fit:contain;
  object-position:bottom;
- transition:left 1s ease,right 1s ease;
- image-rendering:auto;
+ transition:transform 1.2s ease;
 }
 #valentina{left:0}
 #eliott{right:0}
-.heart{
- position:absolute;top:38px;left:50%;
+#hug{
+ display:none;
+ position:absolute;
+ left:50%;
+ bottom:0;
  transform:translateX(-50%);
- font-size:29px;animation:beat 1.6s infinite;
+ height:100%;
+ max-width:85%;
+ object-fit:contain;
 }
-@keyframes beat{
+.heart{
+ position:absolute;
+ left:50%;
+ top:22px;
+ transform:translateX(-50%);
+ font-size:30px;
+ color:#f3a0b6;
+ animation:pulse 1.6s infinite;
+}
+.heart.red{color:#ff304e}
+@keyframes pulse{
  50%{transform:translateX(-50%) scale(1.2)}
 }
-.countdown{
- display:flex;justify-content:center;gap:10px;
- margin:22px 0;
+.message{
+ font-size:14px;
+ color:#eddae9;
+ margin:15px 0;
 }
-.unit{
- min-width:84px;padding:13px 8px;
- background:#ffffff14;border:1px solid #ffffff24;
- border-radius:13px;
+details{
+ margin-top:20px;
+ color:#d7c7dd;
+ font-size:13px;
 }
-.number{font-size:29px;font-weight:750}
-.label{font-size:11px;letter-spacing:1px;color:#d8cadb}
-#message{font-size:14px;color:#f2dbe8;margin:12px 0}
-details{margin-top:22px;font-size:13px;color:#d5c5dc}
 summary{cursor:pointer}
 .controls{margin-top:12px}
-input,button{
- border:1px solid #a99ab6;border-radius:9px;
- padding:10px;font-size:14px;
+button,input{
+ padding:10px;
+ border-radius:9px;
+ font-size:14px;
+ border:1px solid #c6b8d0;
 }
-button{background:#f0d8e4;color:#282039;margin:5px}
-input{max-width:190px;background:white;color:#222}
-.note{font-size:11px;color:#bfb2ca;margin-top:12px}
+button{
+ background:#f0d8e4;
+ color:#292035;
+ margin:5px;
+ cursor:pointer;
+}
+input{max-width:180px}
+.note{
+ font-size:12px;
+ color:#cabbd1;
+}
 @media(max-width:420px){
- .widget{padding:20px 10px}
- .scene{height:220px}
- .avatar{height:195px}
- .unit{min-width:75px}
+ .scene{height:210px}
+ .person{height:185px}
 }
 </style>
 </head>
 <body>
-<div class="widget">
-<h1>Plus que quelques instants avant nous ♡</h1>
-<p class="subtitle">Chaque jour nous rapproche un peu plus.</p>
+<main class="widget">
+<h1 id="title">Nos prochains dodos ♡</h1>
 
 <div class="scene" id="scene">
- <div class="heart">♥</div>
- <img id="valentina" class="avatar"
+ <div class="heart" id="heart">♥</div>
+ <img class="person" id="valentina"
  src="avatar-valentina.png" alt="Valentina">
- <img id="eliott" class="avatar"
+ <img class="person" id="eliott"
  src="avatar-eliott.png" alt="Eliott">
+ <img id="hug" src="avatar-calin.png"
+ alt="Notre câlin">
 </div>
 
-<div class="countdown">
- <div class="unit"><div id="days" class="number">--</div><div class="label">JOURS</div></div>
- <div class="unit"><div id="hours" class="number">--</div><div class="label">HEURES</div></div>
- <div class="unit"><div id="minutes" class="number">--</div><div class="label">MINUTES</div></div>
-</div>
-<p id="message">Chargement de notre date...</p>
+<p class="message" id="message">
+ Chargement de notre date...
+</p>
 
 <details>
- <summary>Tester une autre date (prévisualisation)</summary>
+ <summary>Tester le compte à rebours</summary>
  <div class="controls">
-  <input type="date" id="testDate">
-  <button id="test">Tester</button>
+  <button id="testZero">Simuler 0 dodo</button>
   <button id="reset">Revenir à la vraie date</button>
  </div>
- <p class="note">Le test ne modifie pas la date d'Eliott.</p>
+ <p class="note">
+ Le test ne change pas notre vraie date.
+ </p>
 </details>
-</div>
+</main>
+
 <script>
 const zone="Europe/Paris";
+const get=id=>document.getElementById(id);
 let official=null;
-let preview=null;
-const $=id=>document.getElementById(id);
+let simulated=false;
 
-function parisParts(d){
- const parts=new Intl.DateTimeFormat("en-GB",{
-  timeZone:zone,year:"numeric",month:"2-digit",
-  day:"2-digit",hour:"2-digit",minute:"2-digit",
-  second:"2-digit",hourCycle:"h23"
- }).formatToParts(d);
- return Object.fromEntries(parts.map(p=>[p.type,p.value]));
+function parisDate(){
+ const parts=new Intl.DateTimeFormat("en-CA",{
+  timeZone:zone,
+  year:"numeric",
+  month:"2-digit",
+  day:"2-digit"
+ }).formatToParts(new Date());
+ const p=Object.fromEntries(
+  parts.map(x=>[x.type,x.value])
+ );
+ return p.year+"-"+p.month+"-"+p.day;
 }
+
 function dayNumber(s){
- const [y,m,d]=s.split("-").map(Number);
- return Date.UTC(y,m-1,d)/86400000;
+ const a=s.split("-").map(Number);
+ return Date.UTC(a[0],a[1]-1,a[2])/86400000;
 }
-function localTimestamp(date,time){
- const [y,m,d]=date.split("-").map(Number);
- const [h,min]=time.split(":").map(Number);
- const desired=Date.UTC(y,m-1,d,h,min);
- let guess=desired;
- for(let i=0;i<3;i++){
-  const p=parisParts(new Date(guess));
-  const actual=Date.UTC(+p.year,+p.month-1,+p.day,+p.hour,+p.minute);
-  guess+=desired-actual;
+
+function update(){
+ if(!official)return;
+
+ const target=official.date;
+ const today=simulated?target:parisDate();
+ const remaining=Math.max(
+  0,dayNumber(target)-dayNumber(today)
+ );
+ const finished=remaining===0;
+
+ get("title").textContent=finished
+  ?"C'est aujourd'hui ♡"
+  :"Plus que "+remaining+
+   (remaining===1?" dodo ♡":" dodos ♡");
+
+ get("valentina").style.display=
+  finished?"none":"block";
+ get("eliott").style.display=
+  finished?"none":"block";
+ get("hug").style.display=
+  finished?"block":"none";
+
+ get("heart").style.display=
+  finished?"none":"block";
+
+ get("message").textContent=finished
+  ?"Enfin réunis, place au câlin ! ♡"
+  :"Encore quelques dodos avant notre câlin ♡";
+
+ if(!finished){
+  const scene=get("scene");
+  const a=get("valentina");
+  const b=get("eliott");
+  const width=scene.clientWidth;
+  const avatarWidth=Math.max(
+   a.getBoundingClientRect().width,
+   b.getBoundingClientRect().width
+  );
+  const distance=Math.max(
+   0,(width-2*avatarWidth-8)/2
+  );
+  const progress=Math.max(
+   0,Math.min(1,1-remaining/14)
+  );
+  a.style.transform=
+   "translateX("+(distance*progress)+"px)";
+  b.style.transform=
+   "translateX("+(-distance*progress)+"px)";
  }
- return guess;
-}
-function moveCharacters(progress,reunion){
- const scene=$("scene");
- const a=$("valentina"),b=$("eliott");
- const travel=Math.max(0,(scene.clientWidth-a.offsetWidth-b.offsetWidth)/2);
- a.style.left=(travel*progress)+"px";
- b.style.right=(travel*progress)+"px";
- $("message").textContent=reunion
-  ?"Enfin réunis ! Un câlin pour nous deux ♡"
-  :"Encore un peu de patience avant notre prochain câlin ♡";
-}
-function render(){
- const data=preview||official;
- if(!data)return;
- const now=new Date(),p=parisParts(now);
- const today=p.year+"-"+p.month+"-"+p.day;
- let days=0,hours="--",minutes="--",reunion=false;
- let progress=0;
- if(data.heure){
-  const remaining=localTimestamp(data.date,data.heure)-now.getTime();
-  reunion=remaining<=0;
-  const total=Math.max(0,Math.ceil(remaining/60000));
-  days=Math.floor(total/1440);
-  hours=String(Math.floor(total%1440/60)).padStart(2,"0");
-  minutes=String(total%60).padStart(2,"0");
-  progress=Math.min(1,Math.max(0,1-remaining/(30*86400000)));
- }else{
-  const difference=dayNumber(data.date)-dayNumber(today);
-  days=Math.max(0,difference);
-  reunion=difference<=0;
-  progress=Math.min(1,Math.max(0,1-difference/30));
+
+ if(simulated){
+  get("message").textContent+=" (simulation)";
  }
- if(reunion)progress=1;
- $("days").textContent=days;
- $("hours").textContent=hours;
- $("minutes").textContent=minutes;
- moveCharacters(progress,reunion);
- if(preview)$("message").textContent+=" (mode test)";
 }
+
 async function loadDate(){
  try{
-  const r=await fetch("date.json?t="+Date.now(),{cache:"no-store"});
-  if(!r.ok)throw Error("Fichier inaccessible");
-  const v=await r.json();
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(v.date))
-   throw Error("Date invalide");
-  if(v.heure!==null && !/^([01]\d|2[0-3]):[0-5]\d$/.test(v.heure))
-   throw Error("Heure invalide");
-  official=v;
-  render();
- }catch(e){
-  if(!official&&!preview)
-   $("message").textContent="Date indisponible : vérifier date.json sur GitHub Pages.";
+  const response=await fetch(
+   "date.json?v="+Date.now(),
+   {cache:"no-store"}
+  );
+  if(!response.ok)throw Error("Date inaccessible");
+  const data=await response.json();
+  if(
+   typeof data.date!=="string"||
+   !/^\d{4}-\d{2}-\d{2}$/.test(data.date)
+  )throw Error("Date incorrecte");
+  official=data;
+  update();
+ }catch(error){
+  if(!official){
+   get("message").textContent=
+    "Impossible de lire date.json.";
+  }
  }
 }
-$("test").onclick=()=>{
- const v=$("testDate").value;
- if(!v)return;
- preview={date:v,heure:null};
- render();
+
+get("testZero").onclick=function(){
+ if(!official)return;
+ simulated=true;
+ update();
 };
-$("reset").onclick=()=>{
- preview=null;
- if(official)render();else loadDate();
+
+get("reset").onclick=function(){
+ simulated=false;
+ update();
 };
-window.addEventListener("resize",render);
+
+window.addEventListener("resize",update);
 loadDate();
-setInterval(render,10000);
+setInterval(update,15000);
 setInterval(loadDate,60000);
 </script>
 </body>
